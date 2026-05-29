@@ -1,0 +1,228 @@
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UserProfile = 
+ record {
+   active: bool;
+   branch: Branch;
+   createdAt: Timestamp;
+   name: text;
+   "principal": UserId;
+   role: Role;
+ };
+type UserId = principal;
+type Timestamp = int;
+type StockAdjustmentReason = 
+ variant {
+   Correction;
+   Loss;
+   Purchase;
+   Return;
+   Sale;
+   ServiceUse;
+ };
+type ServiceInput = 
+ record {
+   description: text;
+   price: float64;
+ };
+type ServiceId = nat;
+type Service = 
+ record {
+   code: text;
+   description: text;
+   id: ServiceId;
+   price: float64;
+ };
+type SalesItemInput = 
+ record {
+   name: text;
+   partNumber: text;
+   productId: ProductId;
+   quantity: nat;
+   unitPrice: float64;
+ };
+type SalesItem = 
+ record {
+   name: text;
+   partNumber: text;
+   productId: ProductId;
+   quantity: nat;
+   subtotal: float64;
+   unitPrice: float64;
+ };
+type SalesDocumentView = 
+ record {
+   convertedToInvoiceId: opt DocumentId;
+   createdAt: Timestamp;
+   createdBy: UserId;
+   customerId: CustomerId;
+   customerName: text;
+   docType: DocumentType;
+   documentNumber: text;
+   id: DocumentId;
+   items: vec SalesItem;
+   status: DocumentStatus;
+   subtotal: float64;
+   taxAmount: float64;
+   taxPercent: float64;
+   total: float64;
+ };
+type SalesDocumentInput = 
+ record {
+   customerId: CustomerId;
+   docType: DocumentType;
+   items: vec SalesItemInput;
+   taxPercent: float64;
+ };
+type SalesDocument = 
+ record {
+   convertedToInvoiceId: opt DocumentId;
+   createdAt: Timestamp;
+   createdBy: UserId;
+   customerId: CustomerId;
+   docType: DocumentType;
+   documentNumber: text;
+   id: DocumentId;
+   items: vec SalesItem;
+   status: DocumentStatus;
+   subtotal: float64;
+   taxAmount: float64;
+   taxPercent: float64;
+   total: float64;
+ };
+type Role = 
+ variant {
+   Admin;
+   Technician;
+   Vendor;
+ };
+type ProductInput = 
+ record {
+   costPrice: float64;
+   description: text;
+   marginPercent: float64;
+   minStockAlert: nat;
+   name: text;
+   partNumber: text;
+   supplierName: text;
+   supplierPartNumber: text;
+ };
+type ProductId = nat;
+type Product = 
+ record {
+   costPrice: float64;
+   createdAt: Timestamp;
+   description: text;
+   id: ProductId;
+   marginPercent: float64;
+   minStockAlert: nat;
+   name: text;
+   partNumber: text;
+   supplierName: text;
+   supplierPartNumber: text;
+   updatedAt: Timestamp;
+ };
+type LowStockItem = 
+ record {
+   branch: Branch;
+   minStockAlert: nat;
+   name: text;
+   partNumber: text;
+   productId: ProductId;
+   quantity: nat;
+ };
+type InventoryLocation = 
+ record {
+   branch: Branch;
+   locationLabel: text;
+   productId: ProductId;
+   quantity: nat;
+   updatedAt: Timestamp;
+ };
+type DocumentType = 
+ variant {
+   Invoice;
+   Proforma;
+ };
+type DocumentStatus = 
+ variant {
+   Cancelled;
+   Confirmed;
+   Converted;
+   Draft;
+ };
+type DocumentId = nat;
+type DocumentFilter = 
+ record {
+   customerId: opt CustomerId;
+   docType: opt DocumentType;
+   fromDate: opt Timestamp;
+   status: opt DocumentStatus;
+   toDate: opt Timestamp;
+ };
+type CustomerInput = 
+ record {
+   email: opt text;
+   name: text;
+   phone: opt text;
+   taxId: opt text;
+ };
+type CustomerId = nat;
+type Customer = 
+ record {
+   email: opt text;
+   id: CustomerId;
+   name: text;
+   phone: opt text;
+   taxId: opt text;
+ };
+type Branch = 
+ variant {
+   El_Topo;
+   Puyo;
+ };
+service : {
+  _initializeAccessControl: () -> ();
+  addStock: (productId: ProductId, branch: Branch, locationLabel: text,
+   quantity: nat, reason: StockAdjustmentReason, note: text) -> ();
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  cancelDocument: (id: DocumentId) -> (bool);
+  confirmDocument: (id: DocumentId) -> (bool);
+  convertProformaToInvoice: (proformaId: DocumentId) -> (opt SalesDocument);
+  createCustomer: (input: CustomerInput) -> (Customer);
+  createInvoice: (input: SalesDocumentInput) -> (SalesDocument);
+  createProduct: (input: ProductInput) -> (Product);
+  createProforma: (input: SalesDocumentInput) -> (SalesDocument);
+  createService: (input: ServiceInput) -> (Service);
+  deleteProduct: (id: ProductId) -> (bool);
+  getCallerUserProfile: () -> (opt UserProfile) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getCustomer: (id: CustomerId) -> (opt Customer) query;
+  getDocument: (id: DocumentId) -> (opt SalesDocumentView) query;
+  getLowStockItems: () -> (vec LowStockItem) query;
+  getProduct: (id: ProductId) -> (opt Product) query;
+  getService: (id: ServiceId) -> (opt Service) query;
+  getUserProfile: (user: principal) -> (opt UserProfile) query;
+  isCallerAdmin: () -> (bool) query;
+  listAllUsers: () -> (vec UserProfile) query;
+  listCustomers: (nameFilter: opt text) -> (vec Customer) query;
+  listDocuments: (filter: DocumentFilter) -> (vec SalesDocumentView) query;
+  listLocationsByBranch: (branch: Branch) -> (vec InventoryLocation) query;
+  listLocationsByProduct: (productId: ProductId) ->
+   (vec InventoryLocation) query;
+  listProducts: () -> (vec Product) query;
+  listServices: () -> (vec Service) query;
+  removeStock: (productId: ProductId, branch: Branch, quantity: nat, reason:
+   StockAdjustmentReason, note: text) -> ();
+  saveCallerUserProfile: (profile: UserProfile) -> ();
+  searchProducts: (term: text) -> (vec Product) query;
+  searchServices: (term: text) -> (vec Service) query;
+  setUserActive: (userId: principal, active: bool) -> ();
+  setUserRole: (userId: principal, role: Role) -> ();
+  updateCustomer: (id: CustomerId, input: CustomerInput) -> (opt Customer);
+  updateProduct: (id: ProductId, input: ProductInput) -> (opt Product);
+}

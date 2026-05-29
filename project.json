@@ -1,0 +1,25 @@
+{
+  "overview": "Sistema de gestión integrado para Equipos ET, empresa ecuatoriana de repuestos y mantenimiento de maquinaria pesada Caterpillar y Komatsu con dos sucursales: Puyo y El Topo. Incluye módulo de inventario, ventas, y gestión de clientes.",
+  "features": [
+    "Catálogo de productos con cálculo automático de precios por margen",
+    "Inventario por sucursal con ubicación física (pasillo, columna, vitrina)",
+    "Módulo de ventas con proformas y facturas (PRO-#### / FAC-####)",
+    "Conversión directa de proforma a factura con un clic",
+    "Gestión de clientes con CRUD completo",
+    "Búsqueda detallada de productos por sucursal",
+    "Roles de usuario: Administrador, Vendedor, Técnico",
+    "Panel de control con estadísticas y alertas de stock bajo"
+  ],
+  "category": "business-management",
+  "tags": [
+    "inventory",
+    "sales",
+    "ecuador",
+    "heavy-machinery",
+    "spare-parts",
+    "caterpillar",
+    "komatsu",
+    "business-management"
+  ],
+  "last_updated": "2026-05-02T21:05:00.951Z"
+}

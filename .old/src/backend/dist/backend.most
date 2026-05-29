@@ -1,0 +1,155 @@
+// Version: 1.0.0
+type Branch__903169560 = {#El_Topo; #Puyo};
+type CustomerId__1015005394 = Nat;
+type Customer__754107971 =
+  {
+    email : ?Text;
+    id : CustomerId__1015005394;
+    name : Text;
+    phone : ?Text;
+    taxId : ?Text
+  };
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type DocumentId__446996092 = Nat;
+type DocumentStatus__311210959 = {#Cancelled; #Confirmed; #Converted; #Draft};
+type DocumentType__195372231 = {#Invoice; #Proforma};
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type InventoryLocation__88345477 =
+  {
+    branch : Branch__903169560;
+    locationLabel : Text;
+    productId : ProductId__160010635;
+    quantity : Nat;
+    updatedAt : Timestamp__301639476
+  };
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type LocationKey__643475518 = (ProductId__160010635, Branch__903169560);
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type ProductId__160010635 = Nat;
+type Product__750902660 =
+  {
+    costPrice : Float;
+    createdAt : Timestamp__301639476;
+    description : Text;
+    id : ProductId__160010635;
+    marginPercent : Float;
+    minStockAlert : Nat;
+    name : Text;
+    partNumber : Text;
+    supplierName : Text;
+    supplierPartNumber : Text;
+    updatedAt : Timestamp__301639476
+  };
+type Role__300349085 = {#Admin; #Technician; #Vendor};
+type SalesDocument__191576881 =
+  {
+    convertedToInvoiceId : ?DocumentId__446996092;
+    createdAt : Timestamp__301639476;
+    createdBy : UserId__158757552;
+    customerId : CustomerId__1015005394;
+    docType : DocumentType__195372231;
+    documentNumber : Text;
+    id : DocumentId__446996092;
+    items : [SalesItem__270434850];
+    status : DocumentStatus__311210959;
+    subtotal : Float;
+    taxAmount : Float;
+    taxPercent : Float;
+    total : Float
+  };
+type SalesItem__270434850 =
+  {
+    name : Text;
+    partNumber : Text;
+    productId : ProductId__160010635;
+    quantity : Nat;
+    subtotal : Float;
+    unitPrice : Float
+  };
+type ServiceId__271116140 = Nat;
+type Service__572354221 =
+  {code : Text; description : Text; id : ServiceId__271116140; price : Float};
+type StockAdjustmentReason__24118526 =
+  {#Correction; #Loss; #Purchase; #Return; #Sale; #ServiceUse};
+type StockAdjustment__875709537 =
+  {
+    adjustedAt : Timestamp__301639476;
+    adjustedBy : UserId__158757552;
+    branch : Branch__903169560;
+    note : Text;
+    productId : ProductId__160010635;
+    quantity : Nat;
+    reason : StockAdjustmentReason__24118526
+  };
+type Timestamp__301639476 = Int;
+type UserId__158757552 = Principal;
+type UserProfile__277265826 =
+  {
+    active : Bool;
+    branch : Branch__903169560;
+    createdAt : Timestamp__301639476;
+    name : Text;
+    principal : UserId__158757552;
+    role : Role__300349085
+  };
+type UserRole__1073662873 = {#admin; #guest; #user};
+actor {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1073662873>
+    };
+  stable adjustments :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?StockAdjustment__875709537]];
+      var elementIndex : Nat__490723111
+    };
+  stable customers :
+    {
+      var root : Node__46230540<CustomerId__1015005394, Customer__754107971>;
+      var size : Nat__490723111
+    };
+  stable documents :
+    {
+      var root :
+        Node__46230540<DocumentId__446996092, SalesDocument__191576881>;
+      var size : Nat__490723111
+    };
+  stable locations :
+    {
+      var root :
+        Node__46230540<LocationKey__643475518, InventoryLocation__88345477>;
+      var size : Nat__490723111
+    };
+  stable var nextCustomerId : Nat;
+  stable var nextDocumentId : Nat;
+  stable var nextInvoiceNumber : Nat;
+  stable var nextProductId : Nat;
+  stable var nextProformaNumber : Nat;
+  stable var nextServiceId : Nat;
+  stable products :
+    {
+      var root : Node__46230540<ProductId__160010635, Product__750902660>;
+      var size : Nat__490723111
+    };
+  stable services :
+    {
+      var root : Node__46230540<ServiceId__271116140, Service__572354221>;
+      var size : Nat__490723111
+    };
+  stable userProfiles :
+    {
+      var root : Node__46230540<Principal, UserProfile__277265826>;
+      var size : Nat__490723111
+    }
+};
