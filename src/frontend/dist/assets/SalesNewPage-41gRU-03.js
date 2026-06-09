@@ -1,7 +1,9 @@
-import { g as createLucideIcon, K as useNavigate, M as useSearch, H as DocumentType, r as reactExports, x as useCreateProforma, y as useCreateInvoice, j as jsxRuntimeExports, P as PageHeader, t as Button, N as ArrowRight, O as Check, J as React, E as useListCustomers, Q as useCreateCustomer, U as Label, I as Input, a as useSearchProducts, c as useListServices, B as Badge } from "./index-DJt2JjiO.js";
-import { u as ue } from "./index-BERNttVy.js";
-import { S as Search, P as Plus } from "./search-B-VMGAoT.js";
-import { T as Trash2 } from "./trash-2-Du-SFVPF.js";
+import { g as createLucideIcon, J as useNavigate, K as useSearch, H as DocumentType, r as reactExports, x as useCreateProforma, y as useCreateInvoice, j as jsxRuntimeExports, P as PageHeader, t as Button, M as ArrowRight, N as Check, I as React2, E as useListCustomers, O as useCreateCustomer, a as useSearchProducts, c as useListServices, B as Badge } from "./index-wAMx3mFr.js";
+import { I as Input } from "./input-AZuZDtEh.js";
+import { L as Label } from "./label-Ca9I-f_m.js";
+import { u as ue } from "./index-Dzuo4XyD.js";
+import { S as Search, P as Plus } from "./search-Lx-JW2d5.js";
+import { T as Trash2 } from "./trash-2-Cu8VV5l4.js";
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -34,7 +36,7 @@ const __iconNode = [
 const User = createLucideIcon("user", __iconNode);
 const STEPS = ["Cliente", "Productos", "Revisión"];
 function StepIndicator({ current }) {
-  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-0 mb-8", "data-ocid": "sales_new.steps", children: STEPS.map((label, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs(React.Fragment, { children: [
+  return /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex items-center gap-0 mb-8", "data-ocid": "sales_new.steps", children: STEPS.map((label, i) => /* @__PURE__ */ jsxRuntimeExports.jsxs(React2.Fragment, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex flex-col items-center gap-1", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
         "div",

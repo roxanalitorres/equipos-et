@@ -126,6 +126,11 @@ type Product =
    supplierPartNumber: text;
    updatedAt: Timestamp;
  };
+type PendingUser = 
+ record {
+   "principal": UserId;
+   requestedAt: Timestamp;
+ };
 type LowStockItem = 
  record {
    branch: Branch;
@@ -185,10 +190,36 @@ type Branch =
    El_Topo;
    Puyo;
  };
+type ApprovedUser = 
+ record {
+   approvedAt: Timestamp;
+   branch: Branch;
+   name: text;
+   "principal": UserId;
+   role: Role;
+   status: AccessStatus;
+ };
+type AccessStatus = 
+ variant {
+   Active;
+   Inactive;
+ };
+type AccessResult = 
+ variant {
+   AlreadyApproved;
+   AlreadyPending;
+   NotAuthorized;
+   NotFound;
+   Requested;
+   ok;
+ };
 service : {
   _initializeAccessControl: () -> ();
+  activateUser: (target: principal) -> (AccessResult);
   addStock: (productId: ProductId, branch: Branch, locationLabel: text,
    quantity: nat, reason: StockAdjustmentReason, note: text) -> ();
+  approveUser: (target: principal, name: text, role: Role, branch: Branch) ->
+   (AccessResult);
   assignCallerUserRole: (user: principal, role: UserRole) -> ();
   cancelDocument: (id: DocumentId) -> (bool);
   confirmDocument: (id: DocumentId) -> (bool);
@@ -198,6 +229,7 @@ service : {
   createProduct: (input: ProductInput) -> (Product);
   createProforma: (input: SalesDocumentInput) -> (SalesDocument);
   createService: (input: ServiceInput) -> (Service);
+  deactivateUser: (target: principal) -> (AccessResult);
   deleteProduct: (id: ProductId) -> (bool);
   getCallerUserProfile: () -> (opt UserProfile) query;
   getCallerUserRole: () -> (UserRole) query;
@@ -208,17 +240,21 @@ service : {
   getService: (id: ServiceId) -> (opt Service) query;
   getUserProfile: (user: principal) -> (opt UserProfile) query;
   isCallerAdmin: () -> (bool) query;
+  isInitialized: () -> (bool) query;
   listAllUsers: () -> (vec UserProfile) query;
+  listApprovedUsers: () -> (vec ApprovedUser) query;
   listCustomers: (nameFilter: opt text) -> (vec Customer) query;
   listDocuments: (filter: DocumentFilter) -> (vec SalesDocumentView) query;
   listLocationsByBranch: (branch: Branch) -> (vec InventoryLocation) query;
   listLocationsByProduct: (productId: ProductId) ->
    (vec InventoryLocation) query;
+  listPendingUsers: () -> (vec PendingUser) query;
   listProducts: () -> (vec Product) query;
   listServices: () -> (vec Service) query;
+  rejectUser: (target: principal) -> (AccessResult);
   removeStock: (productId: ProductId, branch: Branch, quantity: nat, reason:
    StockAdjustmentReason, note: text) -> ();
-  saveCallerUserProfile: (profile: UserProfile) -> ();
+  requestAccess: () -> (AccessResult);
   searchProducts: (term: text) -> (vec Product) query;
   searchServices: (term: text) -> (vec Service) query;
   setUserActive: (userId: principal, active: bool) -> ();

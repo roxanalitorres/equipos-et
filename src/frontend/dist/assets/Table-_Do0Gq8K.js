@@ -1,4 +1,4 @@
-import { j as jsxRuntimeExports } from "./index-DJt2JjiO.js";
+import { j as jsxRuntimeExports } from "./index-wAMx3mFr.js";
 function Table({
   columns,
   data,

@@ -10,6 +10,22 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export type AccessResult = { 'ok' : null } |
+  { 'AlreadyApproved' : null } |
+  { 'AlreadyPending' : null } |
+  { 'NotFound' : null } |
+  { 'NotAuthorized' : null } |
+  { 'Requested' : null };
+export type AccessStatus = { 'Inactive' : null } |
+  { 'Active' : null };
+export interface ApprovedUser {
+  'status' : AccessStatus,
+  'principal' : UserId,
+  'branch' : Branch,
+  'approvedAt' : Timestamp,
+  'name' : string,
+  'role' : Role,
+}
 export type Branch = { 'Puyo' : null } |
   { 'El_Topo' : null };
 export interface Customer {
@@ -55,6 +71,7 @@ export interface LowStockItem {
   'productId' : ProductId,
   'quantity' : bigint,
 }
+export interface PendingUser { 'principal' : UserId, 'requestedAt' : Timestamp }
 export interface Product {
   'id' : ProductId,
   'partNumber' : string,
@@ -163,10 +180,12 @@ export type UserRole = { 'admin' : null } |
   { 'guest' : null };
 export interface _SERVICE {
   '_initializeAccessControl' : ActorMethod<[], undefined>,
+  'activateUser' : ActorMethod<[Principal], AccessResult>,
   'addStock' : ActorMethod<
     [ProductId, Branch, string, bigint, StockAdjustmentReason, string],
     undefined
   >,
+  'approveUser' : ActorMethod<[Principal, string, Role, Branch], AccessResult>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'cancelDocument' : ActorMethod<[DocumentId], boolean>,
   'confirmDocument' : ActorMethod<[DocumentId], boolean>,
@@ -176,6 +195,7 @@ export interface _SERVICE {
   'createProduct' : ActorMethod<[ProductInput], Product>,
   'createProforma' : ActorMethod<[SalesDocumentInput], SalesDocument>,
   'createService' : ActorMethod<[ServiceInput], Service>,
+  'deactivateUser' : ActorMethod<[Principal], AccessResult>,
   'deleteProduct' : ActorMethod<[ProductId], boolean>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
@@ -186,18 +206,22 @@ export interface _SERVICE {
   'getService' : ActorMethod<[ServiceId], [] | [Service]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'isInitialized' : ActorMethod<[], boolean>,
   'listAllUsers' : ActorMethod<[], Array<UserProfile>>,
+  'listApprovedUsers' : ActorMethod<[], Array<ApprovedUser>>,
   'listCustomers' : ActorMethod<[[] | [string]], Array<Customer>>,
   'listDocuments' : ActorMethod<[DocumentFilter], Array<SalesDocumentView>>,
   'listLocationsByBranch' : ActorMethod<[Branch], Array<InventoryLocation>>,
   'listLocationsByProduct' : ActorMethod<[ProductId], Array<InventoryLocation>>,
+  'listPendingUsers' : ActorMethod<[], Array<PendingUser>>,
   'listProducts' : ActorMethod<[], Array<Product>>,
   'listServices' : ActorMethod<[], Array<Service>>,
+  'rejectUser' : ActorMethod<[Principal], AccessResult>,
   'removeStock' : ActorMethod<
     [ProductId, Branch, bigint, StockAdjustmentReason, string],
     undefined
   >,
-  'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'requestAccess' : ActorMethod<[], AccessResult>,
   'searchProducts' : ActorMethod<[string], Array<Product>>,
   'searchServices' : ActorMethod<[string], Array<Service>>,
   'setUserActive' : ActorMethod<[Principal, boolean], undefined>,

@@ -8,6 +8,14 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const AccessResult = IDL.Variant({
+  'ok' : IDL.Null,
+  'AlreadyApproved' : IDL.Null,
+  'AlreadyPending' : IDL.Null,
+  'NotFound' : IDL.Null,
+  'NotAuthorized' : IDL.Null,
+  'Requested' : IDL.Null,
+});
 export const ProductId = IDL.Nat;
 export const Branch = IDL.Variant({ 'Puyo' : IDL.Null, 'El_Topo' : IDL.Null });
 export const StockAdjustmentReason = IDL.Variant({
@@ -17,6 +25,11 @@ export const StockAdjustmentReason = IDL.Variant({
   'ServiceUse' : IDL.Null,
   'Correction' : IDL.Null,
   'Purchase' : IDL.Null,
+});
+export const Role = IDL.Variant({
+  'Technician' : IDL.Null,
+  'Admin' : IDL.Null,
+  'Vendor' : IDL.Null,
 });
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
@@ -120,11 +133,6 @@ export const Service = IDL.Record({
   'description' : IDL.Text,
   'price' : IDL.Float64,
 });
-export const Role = IDL.Variant({
-  'Technician' : IDL.Null,
-  'Admin' : IDL.Null,
-  'Vendor' : IDL.Null,
-});
 export const UserProfile = IDL.Record({
   'principal' : UserId,
   'branch' : Branch,
@@ -157,6 +165,18 @@ export const LowStockItem = IDL.Record({
   'productId' : ProductId,
   'quantity' : IDL.Nat,
 });
+export const AccessStatus = IDL.Variant({
+  'Inactive' : IDL.Null,
+  'Active' : IDL.Null,
+});
+export const ApprovedUser = IDL.Record({
+  'status' : AccessStatus,
+  'principal' : UserId,
+  'branch' : Branch,
+  'approvedAt' : Timestamp,
+  'name' : IDL.Text,
+  'role' : Role,
+});
 export const DocumentFilter = IDL.Record({
   'status' : IDL.Opt(DocumentStatus),
   'toDate' : IDL.Opt(Timestamp),
@@ -171,12 +191,22 @@ export const InventoryLocation = IDL.Record({
   'quantity' : IDL.Nat,
   'locationLabel' : IDL.Text,
 });
+export const PendingUser = IDL.Record({
+  'principal' : UserId,
+  'requestedAt' : Timestamp,
+});
 
 export const idlService = IDL.Service({
   '_initializeAccessControl' : IDL.Func([], [], []),
+  'activateUser' : IDL.Func([IDL.Principal], [AccessResult], []),
   'addStock' : IDL.Func(
       [ProductId, Branch, IDL.Text, IDL.Nat, StockAdjustmentReason, IDL.Text],
       [],
+      [],
+    ),
+  'approveUser' : IDL.Func(
+      [IDL.Principal, IDL.Text, Role, Branch],
+      [AccessResult],
       [],
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
@@ -192,6 +222,7 @@ export const idlService = IDL.Service({
   'createProduct' : IDL.Func([ProductInput], [Product], []),
   'createProforma' : IDL.Func([SalesDocumentInput], [SalesDocument], []),
   'createService' : IDL.Func([ServiceInput], [Service], []),
+  'deactivateUser' : IDL.Func([IDL.Principal], [AccessResult], []),
   'deleteProduct' : IDL.Func([ProductId], [IDL.Bool], []),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
@@ -210,7 +241,9 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'isInitialized' : IDL.Func([], [IDL.Bool], ['query']),
   'listAllUsers' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
+  'listApprovedUsers' : IDL.Func([], [IDL.Vec(ApprovedUser)], ['query']),
   'listCustomers' : IDL.Func(
       [IDL.Opt(IDL.Text)],
       [IDL.Vec(Customer)],
@@ -231,14 +264,16 @@ export const idlService = IDL.Service({
       [IDL.Vec(InventoryLocation)],
       ['query'],
     ),
+  'listPendingUsers' : IDL.Func([], [IDL.Vec(PendingUser)], ['query']),
   'listProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
   'listServices' : IDL.Func([], [IDL.Vec(Service)], ['query']),
+  'rejectUser' : IDL.Func([IDL.Principal], [AccessResult], []),
   'removeStock' : IDL.Func(
       [ProductId, Branch, IDL.Nat, StockAdjustmentReason, IDL.Text],
       [],
       [],
     ),
-  'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'requestAccess' : IDL.Func([], [AccessResult], []),
   'searchProducts' : IDL.Func([IDL.Text], [IDL.Vec(Product)], ['query']),
   'searchServices' : IDL.Func([IDL.Text], [IDL.Vec(Service)], ['query']),
   'setUserActive' : IDL.Func([IDL.Principal, IDL.Bool], [], []),
@@ -254,6 +289,14 @@ export const idlService = IDL.Service({
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const AccessResult = IDL.Variant({
+    'ok' : IDL.Null,
+    'AlreadyApproved' : IDL.Null,
+    'AlreadyPending' : IDL.Null,
+    'NotFound' : IDL.Null,
+    'NotAuthorized' : IDL.Null,
+    'Requested' : IDL.Null,
+  });
   const ProductId = IDL.Nat;
   const Branch = IDL.Variant({ 'Puyo' : IDL.Null, 'El_Topo' : IDL.Null });
   const StockAdjustmentReason = IDL.Variant({
@@ -263,6 +306,11 @@ export const idlFactory = ({ IDL }) => {
     'ServiceUse' : IDL.Null,
     'Correction' : IDL.Null,
     'Purchase' : IDL.Null,
+  });
+  const Role = IDL.Variant({
+    'Technician' : IDL.Null,
+    'Admin' : IDL.Null,
+    'Vendor' : IDL.Null,
   });
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
@@ -366,11 +414,6 @@ export const idlFactory = ({ IDL }) => {
     'description' : IDL.Text,
     'price' : IDL.Float64,
   });
-  const Role = IDL.Variant({
-    'Technician' : IDL.Null,
-    'Admin' : IDL.Null,
-    'Vendor' : IDL.Null,
-  });
   const UserProfile = IDL.Record({
     'principal' : UserId,
     'branch' : Branch,
@@ -403,6 +446,18 @@ export const idlFactory = ({ IDL }) => {
     'productId' : ProductId,
     'quantity' : IDL.Nat,
   });
+  const AccessStatus = IDL.Variant({
+    'Inactive' : IDL.Null,
+    'Active' : IDL.Null,
+  });
+  const ApprovedUser = IDL.Record({
+    'status' : AccessStatus,
+    'principal' : UserId,
+    'branch' : Branch,
+    'approvedAt' : Timestamp,
+    'name' : IDL.Text,
+    'role' : Role,
+  });
   const DocumentFilter = IDL.Record({
     'status' : IDL.Opt(DocumentStatus),
     'toDate' : IDL.Opt(Timestamp),
@@ -417,12 +472,22 @@ export const idlFactory = ({ IDL }) => {
     'quantity' : IDL.Nat,
     'locationLabel' : IDL.Text,
   });
+  const PendingUser = IDL.Record({
+    'principal' : UserId,
+    'requestedAt' : Timestamp,
+  });
   
   return IDL.Service({
     '_initializeAccessControl' : IDL.Func([], [], []),
+    'activateUser' : IDL.Func([IDL.Principal], [AccessResult], []),
     'addStock' : IDL.Func(
         [ProductId, Branch, IDL.Text, IDL.Nat, StockAdjustmentReason, IDL.Text],
         [],
+        [],
+      ),
+    'approveUser' : IDL.Func(
+        [IDL.Principal, IDL.Text, Role, Branch],
+        [AccessResult],
         [],
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
@@ -438,6 +503,7 @@ export const idlFactory = ({ IDL }) => {
     'createProduct' : IDL.Func([ProductInput], [Product], []),
     'createProforma' : IDL.Func([SalesDocumentInput], [SalesDocument], []),
     'createService' : IDL.Func([ServiceInput], [Service], []),
+    'deactivateUser' : IDL.Func([IDL.Principal], [AccessResult], []),
     'deleteProduct' : IDL.Func([ProductId], [IDL.Bool], []),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
@@ -456,7 +522,9 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'isInitialized' : IDL.Func([], [IDL.Bool], ['query']),
     'listAllUsers' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
+    'listApprovedUsers' : IDL.Func([], [IDL.Vec(ApprovedUser)], ['query']),
     'listCustomers' : IDL.Func(
         [IDL.Opt(IDL.Text)],
         [IDL.Vec(Customer)],
@@ -477,14 +545,16 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(InventoryLocation)],
         ['query'],
       ),
+    'listPendingUsers' : IDL.Func([], [IDL.Vec(PendingUser)], ['query']),
     'listProducts' : IDL.Func([], [IDL.Vec(Product)], ['query']),
     'listServices' : IDL.Func([], [IDL.Vec(Service)], ['query']),
+    'rejectUser' : IDL.Func([IDL.Principal], [AccessResult], []),
     'removeStock' : IDL.Func(
         [ProductId, Branch, IDL.Nat, StockAdjustmentReason, IDL.Text],
         [],
         [],
       ),
-    'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'requestAccess' : IDL.Func([], [AccessResult], []),
     'searchProducts' : IDL.Func([IDL.Text], [IDL.Vec(Product)], ['query']),
     'searchServices' : IDL.Func([IDL.Text], [IDL.Vec(Service)], ['query']),
     'setUserActive' : IDL.Func([IDL.Principal, IDL.Bool], [], []),

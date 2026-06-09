@@ -1,10 +1,10 @@
-import { g as createLucideIcon, r as reactExports, h as useLowStockItems, u as useListProducts, i as useIsAdmin, j as jsxRuntimeExports, P as PageHeader, L as LoadingSpinner, B as Badge, T as TriangleAlert, R as RefreshCw, k as Branch, a as useSearchProducts, X, S as StockBadge, l as useLocationsByBranch, W as Warehouse, m as StockAdjustmentReason, n as useAddStock, o as useRemoveStock, f as useUpdateProduct, p as useLocationsByProduct } from "./index-DJt2JjiO.js";
-import { u as ue } from "./index-BERNttVy.js";
-import { M as Modal, P as Pencil } from "./Modal-CZ3ExE20.js";
-import { T as Table } from "./Table-S5Ktzlj1.js";
-import { P as Plus, S as Search } from "./search-B-VMGAoT.js";
-import { C as CircleCheck } from "./circle-check-BzaX4e2q.js";
-import { C as CircleX } from "./circle-x-BzQ4zilu.js";
+import { g as createLucideIcon, r as reactExports, h as useLowStockItems, u as useListProducts, i as useIsAdmin, j as jsxRuntimeExports, P as PageHeader, L as LoadingSpinner, B as Badge, T as TriangleAlert, R as RefreshCw, k as Branch, a as useSearchProducts, X, S as StockBadge, l as useLocationsByBranch, W as Warehouse, m as StockAdjustmentReason, n as useAddStock, o as useRemoveStock, f as useUpdateProduct, p as useLocationsByProduct } from "./index-wAMx3mFr.js";
+import { u as ue } from "./index-Dzuo4XyD.js";
+import { M as Modal, P as Pencil } from "./Modal-If0b2cRN.js";
+import { T as Table } from "./Table-_Do0Gq8K.js";
+import { P as Plus, S as Search } from "./search-Lx-JW2d5.js";
+import { C as CircleCheck } from "./circle-check-C_N8rAwP.js";
+import { C as CircleX } from "./circle-x-slwFo8Vz.js";
 /**
  * @license lucide-react v0.511.0 - ISC
  *

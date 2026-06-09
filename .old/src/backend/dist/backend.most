@@ -1,4 +1,14 @@
 // Version: 1.0.0
+type AccessStatus__63367995 = {#Active; #Inactive};
+type ApprovedUser__912189411 =
+  {
+    approvedAt : Timestamp__301639476;
+    branch : Branch__903169560;
+    name : Text;
+    principal : UserId__158757552;
+    role : Role__300349085;
+    status : AccessStatus__63367995
+  };
 type Branch__903169560 = {#El_Topo; #Puyo};
 type CustomerId__1015005394 = Nat;
 type Customer__754107971 =
@@ -9,13 +19,13 @@ type Customer__754107971 =
     phone : ?Text;
     taxId : ?Text
   };
-type Data__791452850<K, V> =
-  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type Data__80296667<K, V> =
+  {var count : Nat__1040412405; kvs : [var ?(K, V)]};
 type DocumentId__446996092 = Nat;
 type DocumentStatus__311210959 = {#Cancelled; #Confirmed; #Converted; #Draft};
 type DocumentType__195372231 = {#Invoice; #Proforma};
-type Internal__8484328<K, V> =
-  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Internal__41346355<K, V> =
+  {children : [var ?Node__1000929467<K, V>]; data : Data__80296667<K, V>};
 type InventoryLocation__88345477 =
   {
     branch : Branch__903169560;
@@ -24,16 +34,18 @@ type InventoryLocation__88345477 =
     quantity : Nat;
     updatedAt : Timestamp__301639476
   };
-type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type Leaf__712614010<K, V> = {data : Data__80296667<K, V>};
 type LocationKey__643475518 = (ProductId__160010635, Branch__903169560);
-type Map__158565046<K, V> = Map__297112838<K, V>;
-type Map__297112838<K, V> =
-  {var root : Node__46230540<K, V>; var size : Nat__490723111};
-type Map__605269027<K, V> = Map__158565046<K, V>;
-type Nat__490723111 = Nat__920180692;
+type Map__222667396<K, V> = Map__912772452<K, V>;
+type Map__709709801<K, V> =
+  {var root : Node__1000929467<K, V>; var size : Nat__1040412405};
+type Map__912772452<K, V> = Map__709709801<K, V>;
+type Nat__1040412405 = Nat__920180692;
 type Nat__920180692 = Nat;
-type Node__46230540<K, V> =
-  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type Node__1000929467<K, V> =
+  {#internal : Internal__41346355<K, V>; #leaf : Leaf__712614010<K, V>};
+type PendingUser__546056997 =
+  {principal : UserId__158757552; requestedAt : Timestamp__301639476};
 type ProductId__160010635 = Nat;
 type Product__750902660 =
   {
@@ -106,30 +118,36 @@ actor {
   stable accessControlState :
     {
       var adminAssigned : Bool;
-      userRoles : Map__605269027<Principal, UserRole__1073662873>
+      userRoles : Map__222667396<Principal, UserRole__1073662873>
     };
   stable adjustments :
     {
-      var blockIndex : Nat__490723111;
+      var blockIndex : Nat__1040412405;
       var blocks : [var [var ?StockAdjustment__875709537]];
-      var elementIndex : Nat__490723111
+      var elementIndex : Nat__1040412405
     };
+  stable approvedUsers :
+    {
+      var root : Node__1000929467<Principal, ApprovedUser__912189411>;
+      var size : Nat__1040412405
+    };
+  stable bootstrapState : {var initialized : Bool};
   stable customers :
     {
-      var root : Node__46230540<CustomerId__1015005394, Customer__754107971>;
-      var size : Nat__490723111
+      var root : Node__1000929467<CustomerId__1015005394, Customer__754107971>;
+      var size : Nat__1040412405
     };
   stable documents :
     {
       var root :
-        Node__46230540<DocumentId__446996092, SalesDocument__191576881>;
-      var size : Nat__490723111
+        Node__1000929467<DocumentId__446996092, SalesDocument__191576881>;
+      var size : Nat__1040412405
     };
   stable locations :
     {
       var root :
-        Node__46230540<LocationKey__643475518, InventoryLocation__88345477>;
-      var size : Nat__490723111
+        Node__1000929467<LocationKey__643475518, InventoryLocation__88345477>;
+      var size : Nat__1040412405
     };
   stable var nextCustomerId : Nat;
   stable var nextDocumentId : Nat;
@@ -137,19 +155,24 @@ actor {
   stable var nextProductId : Nat;
   stable var nextProformaNumber : Nat;
   stable var nextServiceId : Nat;
+  stable pendingUsers :
+    {
+      var root : Node__1000929467<Principal, PendingUser__546056997>;
+      var size : Nat__1040412405
+    };
   stable products :
     {
-      var root : Node__46230540<ProductId__160010635, Product__750902660>;
-      var size : Nat__490723111
+      var root : Node__1000929467<ProductId__160010635, Product__750902660>;
+      var size : Nat__1040412405
     };
   stable services :
     {
-      var root : Node__46230540<ServiceId__271116140, Service__572354221>;
-      var size : Nat__490723111
+      var root : Node__1000929467<ServiceId__271116140, Service__572354221>;
+      var size : Nat__1040412405
     };
   stable userProfiles :
     {
-      var root : Node__46230540<Principal, UserProfile__277265826>;
-      var size : Nat__490723111
+      var root : Node__1000929467<Principal, UserProfile__277265826>;
+      var size : Nat__1040412405
     }
 };

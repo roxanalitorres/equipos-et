@@ -2,8 +2,11 @@ import { useActor } from "@caffeineai/core-infrastructure";
 import type { Principal } from "@icp-sdk/core/principal";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createActor } from "../backend";
-import type { SalesDocumentView } from "../backend.d";
-import type { Service as BackendService } from "../backend.d";
+import type { ApprovedUser, PendingUser } from "../backend.d";
+import type {
+  Service as BackendService,
+  SalesDocumentView,
+} from "../backend.d";
 import type {
   Customer,
   CustomerId,
@@ -130,16 +133,126 @@ export function useCallerProfile() {
   };
 }
 
-export function useSaveCallerProfile() {
+// ─── Access Control ─────────────────────────────────────────────────────────
+
+export function useIsInitialized() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery<boolean>({
+    queryKey: ["isInitialized"],
+    queryFn: async () => {
+      if (!actor) return false;
+      return actor.isInitialized();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useRequestAccess() {
   const { actor } = useBackendActor();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (profile: UserProfile) => {
+    mutationFn: async () => {
       if (!actor) throw new Error("Actor not available");
-      return actor.saveCallerUserProfile(profile);
+      return actor.requestAccess();
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["callerProfile"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["callerProfile"] });
+      queryClient.invalidateQueries({ queryKey: ["isInitialized"] });
+    },
+  });
+}
+
+export function useListPendingUsers() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery<PendingUser[]>({
+    queryKey: ["pendingUsers"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.listPendingUsers();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useListApprovedUsers() {
+  const { actor, isFetching } = useBackendActor();
+  return useQuery<ApprovedUser[]>({
+    queryKey: ["approvedUsers"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return actor.listApprovedUsers();
+    },
+    enabled: !!actor && !isFetching,
+  });
+}
+
+export function useApproveUser() {
+  const { actor } = useBackendActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      target,
+      name,
+      role,
+      branch,
+    }: {
+      target: Principal;
+      name: string;
+      role: Role;
+      branch: Branch;
+    }) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.approveUser(target, name, role, branch);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pendingUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["approvedUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["allUsers"] });
+    },
+  });
+}
+
+export function useRejectUser() {
+  const { actor } = useBackendActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (target: Principal) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.rejectUser(target);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pendingUsers"] });
+    },
+  });
+}
+
+export function useDeactivateUser() {
+  const { actor } = useBackendActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (target: Principal) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.deactivateUser(target);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["approvedUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["allUsers"] });
+    },
+  });
+}
+
+export function useActivateUser() {
+  const { actor } = useBackendActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (target: Principal) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.activateUser(target);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["approvedUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["allUsers"] });
+    },
   });
 }
 

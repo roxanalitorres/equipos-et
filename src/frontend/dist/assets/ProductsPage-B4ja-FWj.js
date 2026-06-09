@@ -1,10 +1,10 @@
-import { r as reactExports, u as useListProducts, a as useSearchProducts, b as useDeleteProduct, c as useListServices, d as useCreateService, j as jsxRuntimeExports, P as PageHeader, L as LoadingSpinner, B as Badge, e as useCreateProduct, f as useUpdateProduct } from "./index-DJt2JjiO.js";
-import { u as ue } from "./index-BERNttVy.js";
-import { E as EmptyState } from "./EmptyState-2OlWgPCk.js";
-import { P as Pencil, M as Modal } from "./Modal-CZ3ExE20.js";
-import { T as Table } from "./Table-S5Ktzlj1.js";
-import { P as Plus, S as Search } from "./search-B-VMGAoT.js";
-import { T as Trash2 } from "./trash-2-Du-SFVPF.js";
+import { r as reactExports, u as useListProducts, a as useSearchProducts, b as useDeleteProduct, c as useListServices, d as useCreateService, j as jsxRuntimeExports, P as PageHeader, L as LoadingSpinner, B as Badge, e as useCreateProduct, f as useUpdateProduct } from "./index-wAMx3mFr.js";
+import { u as ue } from "./index-Dzuo4XyD.js";
+import { E as EmptyState } from "./EmptyState-COxxZXJ2.js";
+import { P as Pencil, M as Modal } from "./Modal-If0b2cRN.js";
+import { T as Table } from "./Table-_Do0Gq8K.js";
+import { P as Plus, S as Search } from "./search-Lx-JW2d5.js";
+import { T as Trash2 } from "./trash-2-Cu8VV5l4.js";
 const EMPTY_FORM = {
   partNumber: "",
   name: "",

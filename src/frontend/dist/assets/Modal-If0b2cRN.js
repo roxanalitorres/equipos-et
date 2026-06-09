@@ -1,4 +1,4 @@
-import { g as createLucideIcon, J as React, j as jsxRuntimeExports, X } from "./index-DJt2JjiO.js";
+import { g as createLucideIcon, I as React2, j as jsxRuntimeExports, X } from "./index-wAMx3mFr.js";
 /**
  * @license lucide-react v0.511.0 - ISC
  *
@@ -30,7 +30,7 @@ function Modal({
   size = "md",
   ocidPrefix
 }) {
-  React.useEffect(() => {
+  React2.useEffect(() => {
     if (!open) return;
     const handler = (e) => {
       if (e.key === "Escape") onClose();

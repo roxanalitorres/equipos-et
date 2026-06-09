@@ -1,4 +1,6 @@
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -8,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Principal } from "@icp-sdk/core/principal";
 import {
   AlertTriangle,
   BookOpen,
@@ -23,20 +26,25 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { AccessStatus } from "../backend.d";
 import Badge, { RoleBadge } from "../components/shared/Badge";
 import EmptyState from "../components/shared/EmptyState";
 import LoadingSpinner from "../components/shared/LoadingSpinner";
 import PageHeader from "../components/shared/PageHeader";
 import { useEmpresa } from "../context/EmpresaContext";
 import {
+  useActivateUser,
+  useApproveUser,
   useCallerProfile,
+  useDeactivateUser,
   useIsAdmin,
-  useListAllUsers,
-  useSetUserActive,
+  useListApprovedUsers,
+  useListPendingUsers,
+  useRejectUser,
   useSetUserRole,
 } from "../hooks/useBackend";
-import { Role } from "../types";
-import type { Branch, UserProfile } from "../types";
+import { Branch, Role } from "../types";
+import type { UserProfile } from "../types";
 
 const ROLE_LABELS: Record<string, string> = {
   Admin: "Administrador",
@@ -288,9 +296,10 @@ Si tienes dudas contacta al administrador del sistema.`;
   );
 }
 
-// ─── User Row ────────────────────────────────────────────────────────────────
+// ─── User Row (legacy, kept for reference) ───────────────────────────────────
 
-function UserRow({
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _UserRow({
   user,
   isSelf,
   onRoleChange,
@@ -606,13 +615,339 @@ function AdminGuideModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-function UsersTab({ callerProfile }: { callerProfile: UserProfile }) {
-  const { data: users = [], isLoading } = useListAllUsers();
+// ─── Approve User Modal ──────────────────────────────────────────────────────
+
+function ApproveUserModal({
+  principal,
+  onClose,
+  onApprove,
+  isPending,
+  manualMode = false,
+}: {
+  principal: string;
+  onClose: () => void;
+  onApprove: (
+    name: string,
+    role: Role,
+    branch: Branch,
+    principalOverride?: string,
+  ) => void;
+  isPending: boolean;
+  manualMode?: boolean;
+}) {
+  const [name, setName] = useState("");
+  const [role, setRole] = useState<Role>(Role.Vendor);
+  const [branch, setBranch] = useState<Branch>(Branch.Puyo);
+  const [manualPrincipal, setManualPrincipal] = useState("");
+
+  const effectivePrincipal = manualMode ? manualPrincipal : principal;
+  const canSubmit =
+    !!name.trim() &&
+    !isPending &&
+    (manualMode ? !!manualPrincipal.trim() : true);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={onClose}
+      onKeyDown={(e) => e.key === "Escape" && onClose()}
+      role="presentation"
+      data-ocid="admin.users.approve.dialog"
+    >
+      <div
+        className="bg-card border border-border rounded-xl shadow-lg w-full max-w-md mx-4 p-6"
+        onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold text-foreground">
+            {manualMode ? "Agregar usuario manualmente" : "Aprobar usuario"}
+          </h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            data-ocid="admin.users.approve.close_button"
+          >
+            <XCircle className="w-5 h-5" />
+          </button>
+        </div>
+        {manualMode ? (
+          <div className="mb-4">
+            <Label className="text-sm">Principal ID</Label>
+            <Input
+              value={manualPrincipal}
+              onChange={(e) => setManualPrincipal(e.target.value)}
+              placeholder="Ej. aaaaa-bbbbb-ccccc-ddddd-eee"
+              className="mt-1 font-mono text-xs"
+              data-ocid="admin.users.approve.principal.input"
+            />
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground mb-4 font-mono truncate">
+            Principal: {principal}
+          </p>
+        )}
+        <div className="space-y-4">
+          <div>
+            <Label className="text-sm">Nombre</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ej. Carlos Pérez"
+              className="mt-1"
+              data-ocid="admin.users.approve.name.input"
+            />
+          </div>
+          <div>
+            <Label className="text-sm">Rol</Label>
+            <Select
+              value={roleKey(role)}
+              onValueChange={(v) => {
+                const map: Record<string, Role> = {
+                  Admin: Role.Admin,
+                  Vendor: Role.Vendor,
+                  Technician: Role.Technician,
+                };
+                setRole(map[v]);
+              }}
+            >
+              <SelectTrigger
+                className="mt-1"
+                data-ocid="admin.users.approve.role.select"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Admin">Administrador</SelectItem>
+                <SelectItem value="Vendor">Vendedor</SelectItem>
+                <SelectItem value="Technician">Técnico</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-sm">Sucursal</Label>
+            <Select
+              value={branch}
+              onValueChange={(v) => setBranch(v as Branch)}
+            >
+              <SelectTrigger
+                className="mt-1"
+                data-ocid="admin.users.approve.branch.select"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={Branch.Puyo}>Puyo</SelectItem>
+                <SelectItem value={Branch.El_Topo}>El Topo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onClose}
+            data-ocid="admin.users.approve.cancel_button"
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={!canSubmit}
+            onClick={() =>
+              onApprove(
+                name.trim(),
+                role,
+                branch,
+                manualMode ? effectivePrincipal : undefined,
+              )
+            }
+            data-ocid="admin.users.approve.confirm_button"
+          >
+            {isPending ? "Aprobando..." : "Aprobar acceso"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Pending Users Section ───────────────────────────────────────────────────
+
+function PendingUsersSection() {
+  const { data: pending = [], isLoading } = useListPendingUsers();
+  const approve = useApproveUser();
+  const reject = useRejectUser();
+  const [selectedPrincipal, setSelectedPrincipal] = useState<string | null>(
+    null,
+  );
+
+  function handleApprove(name: string, role: Role, branch: Branch) {
+    if (!selectedPrincipal) return;
+    const p = Principal.fromText(selectedPrincipal);
+    approve.mutate(
+      { target: p, name, role, branch },
+      {
+        onSuccess: () => {
+          toast.success("Usuario aprobado");
+          setSelectedPrincipal(null);
+        },
+        onError: () => toast.error("Error al aprobar usuario"),
+      },
+    );
+  }
+
+  // tooltip on truncated principal
+  const principalCell = (principalStr: string) => (
+    <td className="px-4 py-3 max-w-[200px]" title={principalStr}>
+      <span className="font-mono text-xs text-muted-foreground block truncate">
+        {principalStr}
+      </span>
+    </td>
+  );
+
+  function handleReject(principalStr: string) {
+    const p = Principal.fromText(principalStr);
+    reject.mutate(p, {
+      onSuccess: () => toast.success("Solicitud rechazada"),
+      onError: () => toast.error("Error al rechazar solicitud"),
+    });
+  }
+
+  if (isLoading) {
+    return (
+      <div className="px-6 py-4">
+        <h3 className="text-sm font-semibold text-foreground mb-3">
+          Solicitudes pendientes
+        </h3>
+        <LoadingSpinner />
+      </div>
+    );
+  }
+
+  if (pending.length === 0) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center py-12 gap-3"
+        data-ocid="admin.solicitudes.empty_state"
+      >
+        <CheckCircle className="w-10 h-10 text-green-500" />
+        <p className="text-sm text-muted-foreground">
+          No hay solicitudes de acceso pendientes
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-6 py-4" data-ocid="admin.users.pending.section">
+      <h3 className="text-sm font-semibold text-foreground mb-3">
+        Solicitudes pendientes ({pending.length})
+      </h3>
+      <div className="rounded-lg border border-border overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-border bg-muted/40">
+              <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Principal
+              </th>
+              <th className="px-4 py-2.5 text-left text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Fecha de solicitud
+              </th>
+              <th className="px-4 py-2.5 text-right text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {pending.map((p, idx) => (
+              <tr
+                key={p.principal.toString()}
+                className="border-b border-border hover:bg-muted/40 transition-colors"
+                data-ocid={`admin.users.pending.item.${idx + 1}`}
+              >
+                {principalCell(p.principal.toString())}
+                <td className="px-4 py-3 text-sm text-muted-foreground">
+                  {new Date(Number(p.requestedAt) / 1_000_000).toLocaleString(
+                    "es-EC",
+                    {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    },
+                  )}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() =>
+                        setSelectedPrincipal(p.principal.toString())
+                      }
+                      data-ocid={`admin.users.pending.approve_button.${idx + 1}`}
+                    >
+                      Aprobar
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs text-destructive border-destructive/30 hover:bg-destructive/10"
+                      onClick={() => {
+                        if (
+                          window.confirm(
+                            "¿Estás seguro de que deseas rechazar esta solicitud? Esta acción no se puede deshacer.",
+                          )
+                        ) {
+                          handleReject(p.principal.toString());
+                        }
+                      }}
+                      data-ocid={`admin.users.pending.reject_button.${idx + 1}`}
+                    >
+                      Rechazar
+                    </Button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {selectedPrincipal && (
+        <ApproveUserModal
+          principal={selectedPrincipal}
+          onClose={() => setSelectedPrincipal(null)}
+          onApprove={handleApprove}
+          isPending={approve.isPending}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Approved Users Section ──────────────────────────────────────────────────
+
+function ApprovedUsersSection({
+  callerProfile,
+}: {
+  callerProfile: UserProfile;
+}) {
+  const { data: approved = [], isLoading } = useListApprovedUsers();
   const setRole = useSetUserRole();
-  const setActive = useSetUserActive();
+  const deactivate = useDeactivateUser();
+  const activate = useActivateUser();
   const [showGuide, setShowGuide] = useState(false);
 
-  function handleRoleChange(userId: UserProfile["principal"], role: Role) {
+  function handleRoleChange(userId: Principal, role: Role) {
     setRole.mutate(
       { userId, role },
       {
@@ -622,21 +957,22 @@ function UsersTab({ callerProfile }: { callerProfile: UserProfile }) {
     );
   }
 
-  function handleToggleActive(
-    userId: UserProfile["principal"],
-    active: boolean,
-  ) {
-    setActive.mutate(
-      { userId, active },
-      {
-        onSuccess: () =>
-          toast.success(active ? "Usuario activado" : "Usuario desactivado"),
-        onError: () => toast.error("Error al actualizar estado"),
-      },
-    );
+  function handleToggleActive(userId: Principal, active: boolean) {
+    if (active) {
+      activate.mutate(userId, {
+        onSuccess: () => toast.success("Usuario activado"),
+        onError: () => toast.error("Error al activar usuario"),
+      });
+    } else {
+      deactivate.mutate(userId, {
+        onSuccess: () => toast.success("Usuario desactivado"),
+        onError: () => toast.error("Error al desactivar usuario"),
+      });
+    }
   }
 
-  const isMutating = setRole.isPending || setActive.isPending;
+  const isMutating =
+    setRole.isPending || deactivate.isPending || activate.isPending;
 
   if (isLoading) {
     return (
@@ -649,12 +985,12 @@ function UsersTab({ callerProfile }: { callerProfile: UserProfile }) {
     );
   }
 
-  if (users.length === 0) {
+  if (approved.length === 0) {
     return (
       <div className="p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">
-            Usuarios del sistema
+            Usuarios aprobados
           </h3>
           <Button
             type="button"
@@ -671,8 +1007,8 @@ function UsersTab({ callerProfile }: { callerProfile: UserProfile }) {
         <EmptyState
           ocid="admin.users.empty_state"
           icon={<Users className="w-6 h-6" />}
-          title="Sin usuarios registrados"
-          description="No hay usuarios en el sistema todavía."
+          title="Sin usuarios aprobados"
+          description="No hay usuarios aprobados en el sistema todavía."
         />
         {showGuide && <AdminGuideModal onClose={() => setShowGuide(false)} />}
       </div>
@@ -684,7 +1020,7 @@ function UsersTab({ callerProfile }: { callerProfile: UserProfile }) {
       {/* Header row: title + guide button */}
       <div className="flex items-center justify-between px-6 py-4">
         <h3 className="text-sm font-semibold text-foreground">
-          Usuarios del sistema
+          Usuarios aprobados
         </h3>
         <Button
           type="button"
@@ -724,8 +1060,8 @@ function UsersTab({ callerProfile }: { callerProfile: UserProfile }) {
             </tr>
           </thead>
           <tbody>
-            {users.map((user, idx) => (
-              <UserRow
+            {approved.map((user, idx) => (
+              <ApprovedUserRow
                 key={user.principal.toString()}
                 user={user}
                 isSelf={isSamePrincipal(
@@ -743,6 +1079,290 @@ function UsersTab({ callerProfile }: { callerProfile: UserProfile }) {
       </div>
 
       {showGuide && <AdminGuideModal onClose={() => setShowGuide(false)} />}
+    </div>
+  );
+}
+
+// ─── Approved User Row ───────────────────────────────────────────────────────
+
+function ApprovedUserRow({
+  user,
+  isSelf,
+  onRoleChange,
+  onToggleActive,
+  isUpdating,
+}: {
+  user: import("../backend.d").ApprovedUser;
+  isSelf: boolean;
+  onRoleChange: (userId: Principal, role: Role) => void;
+  onToggleActive: (userId: Principal, active: boolean) => void;
+  isUpdating: boolean;
+}) {
+  const rKey = roleKey(user.role);
+  const pid = user.principal.toString();
+  const isActive = user.status === AccessStatus.Active;
+
+  // Menu state
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [menuOpen]);
+
+  function handleRoleChange(value: string) {
+    const roleMap: Record<string, Role> = {
+      Admin: Role.Admin,
+      Vendor: Role.Vendor,
+      Technician: Role.Technician,
+    };
+    onRoleChange(user.principal, roleMap[value]);
+  }
+
+  return (
+    <>
+      <tr
+        className="border-b border-border hover:bg-muted/40 transition-colors"
+        data-ocid="admin.users.row"
+      >
+        {/* Nombre / Principal */}
+        <td className="px-4 py-3 min-w-0">
+          <div className="flex flex-col min-w-0">
+            <span className="text-sm font-medium text-foreground truncate">
+              {user.name || "—"}
+            </span>
+            <span className="text-xs text-muted-foreground font-mono truncate">
+              {pid.slice(0, 24)}…
+            </span>
+          </div>
+        </td>
+
+        {/* Cambiar Rol */}
+        <td className="px-4 py-3">
+          <Select
+            value={rKey}
+            onValueChange={handleRoleChange}
+            disabled={isUpdating}
+          >
+            <SelectTrigger
+              className="h-8 w-36 text-xs"
+              data-ocid="admin.users.role.select"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Admin">Administrador</SelectItem>
+              <SelectItem value="Vendor">Vendedor</SelectItem>
+              <SelectItem value="Technician">Técnico</SelectItem>
+            </SelectContent>
+          </Select>
+        </td>
+
+        {/* Rol badge */}
+        <td className="px-4 py-3">
+          <RoleBadge role={rKey} />
+        </td>
+
+        {/* Sucursal */}
+        <td className="px-4 py-3 text-sm text-muted-foreground">
+          {branchLabel(user.branch)}
+        </td>
+
+        {/* Estado de acceso */}
+        <td className="px-4 py-3">
+          {isActive ? (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-[oklch(0.55_0.14_150)] bg-[oklch(0.55_0.14_150)]/10 rounded-full px-2 py-0.5">
+              <CheckCircle className="w-3.5 h-3.5" />
+              Activo
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive bg-destructive/10 rounded-full px-2 py-0.5">
+              <XCircle className="w-3.5 h-3.5" />
+              Inactivo
+            </span>
+          )}
+        </td>
+
+        {/* Acciones — three-dot menu */}
+        <td className="px-4 py-3 text-right">
+          <div className="relative inline-block" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="inline-flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
+              data-ocid="admin.users.actions.open_modal_button"
+              title="Acciones"
+            >
+              <MoreVertical className="w-4 h-4" />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute right-0 top-9 z-40 min-w-[180px] rounded-lg border border-border bg-card shadow-lg py-1">
+                {/* Ver detalle */}
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-muted/60 transition-colors"
+                  onClick={() => {
+                    setShowDetail(true);
+                    setMenuOpen(false);
+                  }}
+                  data-ocid="admin.users.actions.detail_button"
+                >
+                  <Eye className="w-4 h-4 text-muted-foreground" />
+                  Ver detalle
+                </button>
+
+                {/* Enviar instrucciones */}
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-muted/60 transition-colors"
+                  onClick={() => {
+                    setShowInstructions(true);
+                    setMenuOpen(false);
+                  }}
+                  data-ocid="admin.users.actions.instructions_button"
+                >
+                  <Send className="w-4 h-4 text-muted-foreground" />
+                  Enviar instrucciones
+                </button>
+
+                <div className="border-t border-border my-1" />
+
+                {/* Activar / Desactivar */}
+                <button
+                  type="button"
+                  className="w-full flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted/60 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  disabled={isUpdating || isSelf}
+                  onClick={() => {
+                    onToggleActive(user.principal, !isActive);
+                    setMenuOpen(false);
+                  }}
+                  title={
+                    isSelf ? "No puedes desactivar tu propia cuenta" : undefined
+                  }
+                  data-ocid={
+                    isActive
+                      ? "admin.users.deactivate_button"
+                      : "admin.users.activate_button"
+                  }
+                >
+                  {isActive ? (
+                    <>
+                      <XCircle className="w-4 h-4 text-destructive" />
+                      <span className="text-destructive">Desactivar</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 text-[oklch(0.55_0.14_150)]" />
+                      <span className="text-[oklch(0.55_0.14_150)]">
+                        Activar
+                      </span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </td>
+      </tr>
+
+      {showDetail && (
+        <UserDetailModal
+          user={{
+            principal: user.principal,
+            name: user.name,
+            role: user.role,
+            branch: user.branch,
+            active: isActive,
+            createdAt: user.approvedAt,
+          }}
+          onClose={() => setShowDetail(false)}
+        />
+      )}
+      {showInstructions && (
+        <SendInstructionsModal
+          user={{
+            principal: user.principal,
+            name: user.name,
+            role: user.role,
+            branch: user.branch,
+            active: isActive,
+            createdAt: user.approvedAt,
+          }}
+          onClose={() => setShowInstructions(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function UsersTab({ callerProfile }: { callerProfile: UserProfile }) {
+  const approve = useApproveUser();
+  const [manualAddOpen, setManualAddOpen] = useState(false);
+
+  function handleManualApprove(
+    name: string,
+    role: Role,
+    branch: Branch,
+    principalOverride?: string,
+  ) {
+    if (!principalOverride?.trim()) return;
+    const p = Principal.fromText(principalOverride.trim());
+    approve.mutate(
+      { target: p, name, role, branch },
+      {
+        onSuccess: () => {
+          toast.success("Usuario agregado correctamente");
+          setManualAddOpen(false);
+        },
+        onError: () => toast.error("Error al agregar usuario"),
+      },
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="px-6 pt-5 flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Usuarios con acceso al sistema
+        </p>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => setManualAddOpen(true)}
+          data-ocid="admin.users.add_manual_button"
+        >
+          + Agregar usuario manualmente
+        </Button>
+      </div>
+      <ApprovedUsersSection callerProfile={callerProfile} />
+      {manualAddOpen && (
+        <ApproveUserModal
+          principal=""
+          manualMode
+          onClose={() => setManualAddOpen(false)}
+          onApprove={handleManualApprove}
+          isPending={approve.isPending}
+        />
+      )}
+    </div>
+  );
+}
+
+function SolicitudesTab() {
+  return (
+    <div className="p-0">
+      <PendingUsersSection />
     </div>
   );
 }
@@ -982,6 +1602,51 @@ function SistemaTab() {
   );
 }
 
+// ─── Tab Bar with pending badge ─────────────────────────────────────────────
+
+function PendingBadgeTabBar() {
+  const { data: pendingUsers = [] } = useListPendingUsers();
+  const pendingCount = pendingUsers.length;
+
+  const triggerClass =
+    "rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 text-sm font-medium";
+
+  return (
+    <div className="border-b border-border px-6 bg-card">
+      <TabsList className="h-10 bg-transparent p-0 gap-0">
+        <TabsTrigger
+          value="usuarios"
+          className={triggerClass}
+          data-ocid="admin.tab.usuarios"
+        >
+          <Users className="w-4 h-4 mr-1.5" />
+          Usuarios
+        </TabsTrigger>
+        <TabsTrigger
+          value="solicitudes"
+          className={triggerClass}
+          data-ocid="admin.tab.solicitudes"
+        >
+          Solicitudes
+          {pendingCount > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none w-4 h-4 min-w-[1rem]">
+              {pendingCount}
+            </span>
+          )}
+        </TabsTrigger>
+        <TabsTrigger
+          value="sistema"
+          className={triggerClass}
+          data-ocid="admin.tab.sistema"
+        >
+          <Settings className="w-4 h-4 mr-1.5" />
+          Sistema
+        </TabsTrigger>
+      </TabsList>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function AdminPage() {
@@ -1045,26 +1710,7 @@ export default function AdminPage() {
         onValueChange={setActiveTab}
         className="flex flex-col flex-1"
       >
-        <div className="border-b border-border px-6 bg-card">
-          <TabsList className="h-10 bg-transparent p-0 gap-0">
-            <TabsTrigger
-              value="usuarios"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 text-sm font-medium"
-              data-ocid="admin.tab.usuarios"
-            >
-              <Users className="w-4 h-4 mr-1.5" />
-              Usuarios
-            </TabsTrigger>
-            <TabsTrigger
-              value="sistema"
-              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 text-sm font-medium"
-              data-ocid="admin.tab.sistema"
-            >
-              <Settings className="w-4 h-4 mr-1.5" />
-              Sistema
-            </TabsTrigger>
-          </TabsList>
-        </div>
+        <PendingBadgeTabBar />
 
         <TabsContent value="usuarios" className="mt-0 flex-1">
           {callerProfile ? (
@@ -1077,6 +1723,10 @@ export default function AdminPage() {
               <LoadingSpinner />
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="solicitudes" className="mt-0 flex-1">
+          <SolicitudesTab />
         </TabsContent>
 
         <TabsContent value="sistema" className="mt-0">
